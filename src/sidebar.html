@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Wikipedia Vortex</title>
+        <style>
+body, html {
+    font-family: sans-serif;
+    font-size: 12px;
+}
+#keyList > li {
+    font-weight: bold;
+}
+#keyList > li.found {
+    font-weight: normal;
+    text-decoration: line-through;
+}
+li.key1::before {
+    color: #5b6ee1;
+}
+li.key2::before {
+    color: #d77bba;
+}
+li.key3::before {
+    color: #6abe30;
+}
+span.key1 {
+    color: #5b6ee1;
+}
+span.key2 {
+    color: #d77bba;
+}
+span.key3 {
+    color: #6abe30;
+}
+#keyList {
+    list-style: none;
+}
+#keyList > li::before {
+    content: "\2022";
+    font-size: 400%;
+    vertical-align: middle;
+    font-weight: bold; /* If you want it to be bold */
+    display: inline-block; /* Needed to add space between the bullet and the text */
+    width: 0.5em; /* Also needed for space (tweak if needed) */
+    margin-left: -0.5em; /* Also needed for space (tweak if needed) */
+    line-height: 0.5em;
+}
+.keyIcon {
+    font-size: 400%;
+    vertical-align: middle;
+    font-weight: bold; /* If you want it to be bold */
+    display: inline-block; /* Needed to add space between the bullet and the text */
+    width: 0.5em; /* Also needed for space (tweak if needed) */
+    line-height: 0.5em;
+}
+ul, ol {
+    padding-left: 1.5em;
+}
+        </style>
+    </head>
+    <body>
+
+        <div id="missionPanel">
+            <h3>Quests</h3>
+            <ul id="keyList">
+            </ul>
+            Complete all quests in any order, then return to <b><span id="targetPage"></span></b>
+            <h3>Steps Remaining: <span id="stepsRemaining">10</span></h3>
+            <ol id="historyList">
+            </ol>
+        </div>
+        <div id="buttons">
+            <div>
+                <button onclick="newLevel()">Start a New Vortex</button>
+            </div>
+        </div>
+        <div id="rules">
+            <ul>
+                <li>No retracing steps
+                <li>No leaving Wikipedia
+                <li>No Category pages
+                <li>No "List of" pages
+                <li>No "Disambiguation" pages
+                <li>No editing pages
+                <li>Take your time and learn stuff
+                <li>Don't run out of steps
+            </ul>
+            <p>Game created by Impbox for LDJAM 48, Wikipedia content is created by many other people</p>
+        </div>
+
+        <script>
+const electron = require('electron');
+const {ipcRenderer} = electron;
+const historyList = document.querySelector('#historyList');
+const stepsRemaining = document.querySelector('#stepsRemaining');
+const targetPage = document.querySelector('#targetPage');
+const keyList = document.querySelector('#keyList');
+
+var hlist = [];
+var keys = [
+];
+
+function restartLevel() {
+    ipcRenderer.invoke('restart-level', null).then((result) => {
+        historyList.innerHTML = "";
+        stepsRemaining.innerText = "10";
+        hlist.length = 0;
+    });
+}
+
+function newLevel() {
+    ipcRenderer.invoke('new-level', null).then((result) => {
+        targetPage.innerText = "Loading...";
+        historyList.innerHTML = "";
+        stepsRemaining.innerText = "10";
+        hlist.length = 0;
+    });
+}
+
+console.log(historyList);
+
+ipcRenderer.on('step', (event,arg) => {
+    console.log(arg.pageName);
+
+    var li = document.createElement('li');
+    li.appendChild(document.createTextNode(arg.pageName));
+    historyList.appendChild(li);
+
+    hlist.push({ pageName: arg.pageName, el: li });
+
+    stepsRemaining.innerText = "" + arg.stepsRemaining;
+
+});
+
+ipcRenderer.on('start-round', (event,arg) => {
+    targetPage.innerText = arg.target;
+    keyList.innerHTML = "";
+
+    console.log(arg.keys);
+
+    let keyId = 1;
+    for(const key of arg.keys) {
+        var li = document.createElement('li');
+        li.appendChild(document.createTextNode(key));
+        li.className = "key" + keyId;
+        keyList.appendChild(li);
+        keys.push({ name: key, found: false, el: li });
+        keyId++;
+    }
+});
+
+ipcRenderer.on('found-key', (event,arg) => {
+    console.log("found key ", arg.key, arg.pageName);
+    stepsRemaining.innerText = "" + arg.stepsRemaining;
+    let keyId = 0;
+    for(var i = 0; i < keys.length; i++) {
+        if(keys[i].found == false && keys[i].name == arg.key) {
+            keyId = i+1;
+            keys[i].el.className += " found";
+        }
+    }
+    for(var i = 0; i < hlist.length; i++) {
+        if(hlist[i].pageName == arg.pageName) {
+            var keyIcon = document.createElement("span");
+            keyIcon.appendChild(document.createTextNode(" \u2022"));
+            keyIcon.className = "key" + keyId + " keyIcon";
+            hlist[i].el.appendChild(keyIcon);
+        }
+    }
+});
+
+ipcRenderer.on('gameOver', (event,arg) => {
+    console.log("Game Over");
+});
+        </script>
+
+    <body>
+</html>
