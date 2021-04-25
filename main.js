@@ -169,7 +169,7 @@ app.on('ready', function() {
     //Menu.setApplicationMenu(mainMenu);
     sidebarWindow.removeMenu();
 
-    sidebarWindow.loadFile("src/sidebar.html");
+    sidebarWindow.loadFile("sidebar.html");
 
     {
         let pos = mainWindow.getPosition();
